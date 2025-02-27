@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">싹다 잡아들여</string>
+    <string name="camera_permission_required">카메라 권한이 필요합니다</string>
+    <string name="detecting_plate">번호판을 인식 중입니다...</string>
+    <string name="server_waiting">서버 상태: 대기 중</string>
+    <string name="server_sending">서버 상태: 전송 중...</string>
+    <string name="server_success">서버 상태: 전송 성공</string>
+    <string name="server_failed">서버 상태: 전송 실패</string>
+</resources>
