@@ -51,7 +51,9 @@ class ImprovedLicensePlateDetectionProcessor(
 
         // 이미지 전처리 (ImageProcessor 클래스 구현 필요)
         val processedImage = ImageProcessor.process(mediaImage, imageProxy.imageInfo.rotationDegrees)
-        val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
+
+        val image = InputImage.fromMediaImage(processedImage, imageProxy.imageInfo.rotationDegrees)
 
         textRecognizer.process(image)
             .addOnSuccessListener { text ->
