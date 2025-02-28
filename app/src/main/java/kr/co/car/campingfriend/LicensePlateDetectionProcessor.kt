@@ -4,7 +4,6 @@ import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Rect
-import android.media.Image
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
@@ -23,7 +22,8 @@ class ImprovedLicensePlateDetectionProcessor(
     private val textRecognizer: TextRecognizer,
     private val plateNumberListener: (String) -> Unit,
     private val serverStatusListener: (String) -> Unit,
-    val sharedPreferences: SharedPreferences // 생성자에서 sharedPreferences를
+    val sharedPreferences: SharedPreferences // 생성자에서 sharedPreferences를 받음ㅇㅇㅇ
+
 ) : ImageAnalysis.Analyzer {
 
     private val client = OkHttpClient()
@@ -31,6 +31,7 @@ class ImprovedLicensePlateDetectionProcessor(
     private var lastDetectedPlate = ""
     private var lastDetectionTime = 0L
     private var lastSentTime = 0L
+
 
     // 최근 인식 결과 저장을 위한 맵 (번호판 -> 카운트)
     private val recentDetections = mutableMapOf<String, Int>()
@@ -51,8 +52,7 @@ class ImprovedLicensePlateDetectionProcessor(
 
         isProcessing.set(true)
 
-        // 이미지 전처리 (ImageProcessor 클래스 구현 필요)
-        val processedImage = ImageProcessor.process(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
         textRecognizer.process(image)
@@ -82,6 +82,7 @@ class ImprovedLicensePlateDetectionProcessor(
                 // 번호판 중복 감지 방지 로직
                 if (bestPlate == lastDetectedPlate && (currentTime - lastDetectionTime) < DETECTION_COOLDOWN_MS) {
                     Log.d(TAG, "쿨다운 시간 내 감지됨, 무시: $bestPlate")
+                    serverStatusListener("쿨다운 시간 내 감지됨, 무시: $bestPlate")
                     imageProxy.close()
                     return
                 }
@@ -98,6 +99,8 @@ class ImprovedLicensePlateDetectionProcessor(
                     // 서버 전송 딜레이 확인
                     if (currentTime - lastSentTime < SERVER_SEND_COOLDOWN_MS) {
                         Log.d(TAG, "서버 전송 쿨다운 시간 내, 무시: $bestPlate")
+                        serverStatusListener("서버 전송 쿨다운 시간 내, 무시: $bestPlate")
+
                         imageProxy.close()
                         return
                     }
@@ -208,29 +211,111 @@ class ImprovedLicensePlateDetectionProcessor(
         return aspectConfidence + densityConfidence + patternConfidence
     }
 
+    // 한글 검증을 건너뛰기 위한 상수
+    val bypassKoreanValidation = true // 이 값을 'true'로 설정하면 한글 검증을 건너뛰고, 'false'로 설정하면 검증이 진행됩니다.
+
     private fun validateAndCorrectPlate(plate: String): String {
+        // 번호판에 허용된 문자셋 (한국어 번호판 기준)
+        val allowedTypeChars = "가나다라마거너더러머버서어저허고노도로모보소오조호구누두루무부수우주후아바사자차카타파하배"
+
         // 번호판 형식 검증 및 오류 수정
         val corrected = plate.trim()
             .replace("O", "0") // 'O'를 '0'으로 교체
             .replace("I", "1") // 'I'를 '1'로 교체
             .replace("B", "8") // 가능한 B와 8 혼동 수정
+            .replace("Z", "2") // 'Z'를 '2'로 교체
+            .replace("S", "5") // 'S'를 '5'로 교체
+            .replace("Q", "0") // 'Q'를 '0'으로 교체
 
         // 지역명 검증
         val regionCodes = listOf("서울", "경기", "인천", "강원", "충북", "충남", "대전", "경북", "경남", "부산", "울산", "대구", "전북", "전남", "광주", "제주")
 
+        // 모든 한글자가 유효한 한글인지 검사하는 함수
+        fun hasValidKoreanChars(str: String): Boolean {
+            if (bypassKoreanValidation) {
+                // 한글 검증을 건너뛰고 true 반환
+                return true
+            }
+
+            val koreanCharPattern = "[가-힣]".toRegex()
+            for (char in str) {
+                if (char.toString().matches(koreanCharPattern)) {
+                    // 번호판 용도별 문자에 있는지 확인
+                    if (char !in allowedTypeChars) {
+                        Log.d(TAG, "유효하지 않은 한글 문자 발견: $char")
+                        return false
+                    }
+                }
+            }
+            return true
+        }
+
+        // 모든 숫자가 유효한지 검사
+        fun hasValidDigits(str: String): Boolean {
+            val digitPattern = "\\d".toRegex()
+            for (char in str) {
+                if (char.toString().matches(digitPattern)) {
+                    continue // 숫자는 항상 유효
+                } else if (char.toString().matches("[가-힣]".toRegex())) {
+                    continue // 한글은 별도 검사
+                } else {
+                    Log.d(TAG, "유효하지 않은 문자 발견: $char")
+                    return false // 숫자나 한글이 아닌 문자 발견
+                }
+            }
+            return true
+        }
+
+        // 전체 문자열이 유효한지 검사
+        if (!hasValidKoreanChars(corrected) || !hasValidDigits(corrected)) {
+            return "" // 한국 번호판에 없는 문자가 포함된 경우
+        }
+
         // 두 가지 패턴 검증
         if (NEW_CAR_PATTERN.matcher(corrected).matches()) {
-            return corrected
+            val hangulChar = corrected.filter { it.toString().matches("[가-힣]".toRegex()) }.firstOrNull()
+            if (hangulChar != null && hangulChar in allowedTypeChars) {
+                return corrected
+            } else {
+                Log.d(TAG, "신형 번호판 패턴 검증 실패: 유효하지 않은 한글 문자 - $hangulChar")
+                return ""
+            }
         } else if (BUSINESS_LICENSE_PATTERN.matcher(corrected).matches()) {
             // 사업용 번호판 첫 두 글자가 지역명인지 확인
             val region = corrected.substring(0, 2)
-            if (regionCodes.contains(region)) {
+            val typeChar = corrected.substring(4, 5).firstOrNull()
+
+            if (regionCodes.contains(region) && (typeChar == null || typeChar in allowedTypeChars)) {
                 return corrected
+            } else {
+                Log.d(TAG, "사업용 번호판 패턴 검증 실패: 지역명 $region 또는 유형 문자 $typeChar 오류")
+                return ""
             }
         } else if (OLD_CAR_PATTERN.matcher(corrected).matches()) {
-            return corrected
+            val hangulChar = corrected.filter { it.toString().matches("[가-힣]".toRegex()) }.firstOrNull()
+            if (hangulChar != null && hangulChar in allowedTypeChars) {
+                return corrected
+            } else {
+                Log.d(TAG, "구형 번호판 패턴 검증 실패: 유효하지 않은 한글 문자 - $hangulChar")
+                return ""
+            }
+        } else {
+            // 다른 유형(렌터카, 택시, 외교 등) 검증
+            for (pattern in LICENSE_PATTERNS) {
+                if (pattern.matcher(corrected).matches()) {
+                    // 해당 유형에 맞는 한글 문자 검증
+                    val hangulChar = corrected.filter { it.toString().matches("[가-힣]".toRegex()) }.firstOrNull()
+                    if (hangulChar != null && hangulChar in allowedTypeChars) {
+                        return corrected
+                    } else {
+                        Log.d(TAG, "기타 번호판 패턴 검증 실패: 유효하지 않은 한글 문자 - $hangulChar")
+                        return ""
+                    }
+                }
+            }
         }
 
+        Log.d(TAG, "번호판 패턴 검증 실패: $corrected")
         return ""  // 검증 실패
     }
 
@@ -274,11 +359,14 @@ class ImprovedLicensePlateDetectionProcessor(
             return
         }
 
+        // 기존 저장된 캠핑장 ID 불러오기
+        val savedCampingId = getSavedCampingId()
+
         val jsonObject = JSONObject().apply {
             put("licensePlate", licensePlate)
             put("timestamp", System.currentTimeMillis())
             put("deviceId", android.os.Build.MODEL)
-            put("camping_id", getSavedCampingId())
+            put("camping_id" ,savedCampingId )
         }
 
         val requestBody = MultipartBody.Builder()
@@ -288,9 +376,11 @@ class ImprovedLicensePlateDetectionProcessor(
 
         sendRequest(requestBody)
     }
+
     private fun getSavedCampingId(): String {
         return sharedPreferences.getString("camping_id", "") ?: "없음"
     }
+
 
     private fun sendFullFrame(licensePlate: String, imageProxy: ImageProxy) {
         val bitmap = imageProxy.toBitmap() ?: return
@@ -402,19 +492,6 @@ class ImprovedLicensePlateDetectionProcessor(
             DIPLOMATIC_PATTERN,
             TEMPORARY_PATTERN
         )
-    }
-}
-
-// 이미지 처리를 위한 클래스 (아직 구현 필요)
-object ImageProcessor {
-    fun process(image: Image, rotationDegrees: Int): Image {
-        // 여기에 이미지 전처리 로직 구현
-        // - 대비 향상
-        // - 노이즈 감소
-        // - 이진화(흑백화) 등
-
-        // 예제 코드이므로 실제 구현은 생략하고 원본 이미지 반환
-        return image
     }
 }
 
