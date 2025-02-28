@@ -1,9 +1,11 @@
 package kr.co.car.campingfriend
 
 import android.Manifest
+import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.PowerManager
 import android.util.Log
 import android.widget.EditText
 import android.widget.TextView
@@ -26,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewBinding: ActivityMainBinding
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var wakeLock: PowerManager.WakeLock
 
     private val textRecognizer by lazy {
         TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build())
@@ -38,6 +41,12 @@ class MainActivity : AppCompatActivity() {
 
         // SharedPreferences 초기화
         sharedPreferences = getSharedPreferences("CampingAppPrefs", MODE_PRIVATE)
+
+
+        // 화면이 절대 꺼지지 않도록 WakeLock 설정
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ON_AFTER_RELEASE, "CampingFriend::WakeLock")
+        wakeLock.acquire() // 화면을 계속 켜두기
 
         // 카메라 권한 확인
         if (allPermissionsGranted()) {
