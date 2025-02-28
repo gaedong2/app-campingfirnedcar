@@ -59,7 +59,13 @@ class MainActivity : AppCompatActivity() {
 
         // 기존 저장된 캠핑장 ID 불러오기
         val savedCampingId = getSavedCampingId()
-        viewBinding.detectedPlateText.text = "캠핑장 ID: $savedCampingId"
+
+        if(savedCampingId == ""){
+            viewBinding.detectedPlateText.text = "캠핑장 ID가 없습니다. 설정 버튼을 눌러주세요."
+        }
+        else{
+            viewBinding.detectedPlateText.text = "캠핑장 ID: $savedCampingId"
+        }
     }
 
     private fun startCamera() {
@@ -82,7 +88,7 @@ class MainActivity : AppCompatActivity() {
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
 
-                // 이미지 분석기 설정
+                // ImprovedLicensePlateDetectionProcessor에 sharedPreferences 전달
                 val licensePlateProcessor = ImprovedLicensePlateDetectionProcessor(
                     textRecognizer,
                     { plateNumber ->
@@ -94,8 +100,10 @@ class MainActivity : AppCompatActivity() {
                         runOnUiThread {
                             viewBinding.serverStatusText.text = "서버 상태: $status"
                         }
-                    }
+                    },
+                    sharedPreferences // 여기서 전달
                 )
+
 
                 imageAnalysis.setAnalyzer(cameraExecutor, licensePlateProcessor)
 
@@ -170,3 +178,4 @@ class MainActivity : AppCompatActivity() {
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     }
 }
+
