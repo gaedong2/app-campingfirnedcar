@@ -12,6 +12,7 @@ import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognizer
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import org.json.JSONException
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -82,7 +83,7 @@ class ImprovedLicensePlateDetectionProcessor(
                 // 번호판 중복 감지 방지 로직
                 if (bestPlate == lastDetectedPlate && (currentTime - lastDetectionTime) < DETECTION_COOLDOWN_MS) {
                     Log.d(TAG, "쿨다운 시간 내 감지됨, 무시: $bestPlate")
-                    serverStatusListener("쿨다운 시간 내 감지됨, 무시: $bestPlate")
+
                     imageProxy.close()
                     return
                 }
@@ -99,7 +100,7 @@ class ImprovedLicensePlateDetectionProcessor(
                     // 서버 전송 딜레이 확인
                     if (currentTime - lastSentTime < SERVER_SEND_COOLDOWN_MS) {
                         Log.d(TAG, "서버 전송 쿨다운 시간 내, 무시: $bestPlate")
-                        serverStatusListener("서버 전송 쿨다운 시간 내, 무시: $bestPlate")
+
 
                         imageProxy.close()
                         return
@@ -457,7 +458,14 @@ class ImprovedLicensePlateDetectionProcessor(
 
             override fun onResponse(call: Call, response: Response) {
                 if (response.isSuccessful) {
-                    serverStatusListener("전송 성공 ${response.message}")
+                    val responseBody = response.body?.string()
+                    try {
+                        val jsonObject = JSONObject(responseBody)
+                        val message = jsonObject.getString("message")
+                        serverStatusListener("전송 성공: $message")
+                    } catch (e: JSONException) {
+                        serverStatusListener("응답 본문 파싱 오류")
+                    }
                 } else {
                     serverStatusListener("전송 실패: 서버 오류 ${response.code}")
                 }
