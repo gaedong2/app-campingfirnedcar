@@ -457,7 +457,7 @@ class ImprovedLicensePlateDetectionProcessor(
 
             override fun onResponse(call: Call, response: Response) {
                 if (response.isSuccessful) {
-                    serverStatusListener("전송 성공")
+                    serverStatusListener("전송 성공 ${response.message}")
                 } else {
                     serverStatusListener("전송 실패: 서버 오류 ${response.code}")
                 }
