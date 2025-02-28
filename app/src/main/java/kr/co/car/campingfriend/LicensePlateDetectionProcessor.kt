@@ -22,7 +22,7 @@ class ImprovedLicensePlateDetectionProcessor(
     private val textRecognizer: TextRecognizer,
     private val plateNumberListener: (String) -> Unit,
     private val serverStatusListener: (String) -> Unit,
-    val sharedPreferences: SharedPreferences // 생성자에서 sharedPreferences를 받음
+    val sharedPreferences: SharedPreferences // 생성자에서 sharedPreferences를 받음ㅇㅇㅇ
 
 ) : ImageAnalysis.Analyzer {
 
