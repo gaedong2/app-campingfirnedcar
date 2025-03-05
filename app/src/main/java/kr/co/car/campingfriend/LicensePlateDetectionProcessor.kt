@@ -1,4 +1,5 @@
 package kr.co.car.campingfriend
+
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.graphics.Bitmap
@@ -23,8 +24,7 @@ class ImprovedLicensePlateDetectionProcessor(
     private val textRecognizer: TextRecognizer,
     private val plateNumberListener: (String) -> Unit,
     private val serverStatusListener: (String) -> Unit,
-    val sharedPreferences: SharedPreferences // 생성자에서 sharedPreferences를 받음ㅇㅇㅇ
-
+    val sharedPreferences: SharedPreferences
 ) : ImageAnalysis.Analyzer {
 
     private val client = OkHttpClient()
@@ -33,11 +33,10 @@ class ImprovedLicensePlateDetectionProcessor(
     private var lastDetectionTime = 0L
     private var lastSentTime = 0L
 
-
     // 최근 인식 결과 저장을 위한 맵 (번호판 -> 카운트)
     private val recentDetections = mutableMapOf<String, Int>()
     private val MAX_RECENT_DETECTIONS = 10
-    private val CONFIDENCE_THRESHOLD = 0.7f
+    private val CONFIDENCE_THRESHOLD = 0.7f //신뢰도
 
     @SuppressLint("UnsafeOptInUsageError")
     override fun analyze(imageProxy: ImageProxy) {
@@ -52,7 +51,6 @@ class ImprovedLicensePlateDetectionProcessor(
         }
 
         isProcessing.set(true)
-
 
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
@@ -100,7 +98,6 @@ class ImprovedLicensePlateDetectionProcessor(
                     // 서버 전송 딜레이 확인
                     if (currentTime - lastSentTime < SERVER_SEND_COOLDOWN_MS) {
                         Log.d(TAG, "서버 전송 쿨다운 시간 내, 무시: $bestPlate")
-
 
                         imageProxy.close()
                         return
@@ -306,7 +303,8 @@ class ImprovedLicensePlateDetectionProcessor(
                 if (pattern.matcher(corrected).matches()) {
                     // 해당 유형에 맞는 한글 문자 검증
                     val hangulChar = corrected.filter { it.toString().matches("[가-힣]".toRegex()) }.firstOrNull()
-                    if (hangulChar != null && hangulChar in allowedTypeChars) {
+                    if (hangulChar != null && hangulChar in allowedTypeChars
+                    ) {
                         return corrected
                     } else {
                         Log.d(TAG, "기타 번호판 패턴 검증 실패: 유효하지 않은 한글 문자 - $hangulChar")
@@ -381,7 +379,6 @@ class ImprovedLicensePlateDetectionProcessor(
     private fun getSavedCampingId(): String {
         return sharedPreferences.getString("camping_id", "") ?: "없음"
     }
-
 
     private fun sendFullFrame(licensePlate: String, imageProxy: ImageProxy) {
         val bitmap = imageProxy.toBitmap() ?: return
@@ -502,8 +499,6 @@ class ImprovedLicensePlateDetectionProcessor(
         )
     }
 }
-
-
 
 // 이미지 변환 확장 함수
 fun ImageProxy.toBitmap(): Bitmap? {
