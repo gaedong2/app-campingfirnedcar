@@ -78,10 +78,10 @@ class ImprovedLicensePlateDetectionProcessor(
 
                 val currentTime = System.currentTimeMillis()
 
-                // 번호판 중복 감지 방지 로직
-                if (bestPlate == lastDetectedPlate && (currentTime - lastDetectionTime) < DETECTION_COOLDOWN_MS) {
+                // 번호판 중복 감지 방지 로직 (이전 검출된 번호판과 같은경우 무시)
+                if (bestPlate == lastDetectedPlate){// && (currentTime - lastDetectionTime) < DETECTION_COOLDOWN_MS) {
                     Log.d(TAG, "쿨다운 시간 내 감지됨, 무시: $bestPlate")
-
+                    serverStatusListener("이전번호판과 동일")
                     imageProxy.close()
                     return
                 }
