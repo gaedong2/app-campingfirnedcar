@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">싹다 잡아들여</string>
+    <string name="app_name">캠핑게이트</string>
     <string name="camera_permission_required">카메라 권한이 필요합니다</string>
     <string name="detecting_plate">번호판을 인식 중입니다...</string>
     <string name="server_waiting">서버 상태: 대기 중</string>
