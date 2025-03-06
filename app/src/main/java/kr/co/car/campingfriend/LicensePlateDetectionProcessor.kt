@@ -96,13 +96,13 @@ class ImprovedLicensePlateDetectionProcessor(
                     plateNumberListener(bestPlate)
 
                     // 서버 전송 딜레이 확인
-                    if (currentTime - lastSentTime < SERVER_SEND_COOLDOWN_MS) {
-                        Log.d(TAG, "서버 전송 쿨다운 시간 내, 무시: $bestPlate")
+                    //if (currentTime - lastSentTime < SERVER_SEND_COOLDOWN_MS) {
+                    //    Log.d(TAG, "서버 전송 쿨다운 시간 내, 무시: $bestPlate")
 
-                        imageProxy.close()
-                        return
-                    }
-                    lastSentTime = currentTime
+                    //    imageProxy.close()
+                    //    return
+                    //}
+                   // lastSentTime = currentTime
 
                     when (IMAGE_SEND_MODE) {
                         "NONE" -> sendTextOnly(bestPlate)
