@@ -36,7 +36,7 @@ class ImprovedLicensePlateDetectionProcessor(
     // 최근 인식 결과 저장을 위한 맵 (번호판 -> 카운트)
     private val recentDetections = mutableMapOf<String, Int>()
     private val MAX_RECENT_DETECTIONS = 10
-    private val CONFIDENCE_THRESHOLD = 0.5f //신뢰도
+    private val CONFIDENCE_THRESHOLD = 0.7f //신뢰도
 
     @SuppressLint("UnsafeOptInUsageError")
     override fun analyze(imageProxy: ImageProxy) {
@@ -79,7 +79,7 @@ class ImprovedLicensePlateDetectionProcessor(
                 val currentTime = System.currentTimeMillis()
 
                 // 번호판 중복 감지 방지 로직 (이전 검출된 번호판과 같은경우 무시)
-                if (bestPlate == lastDetectedPlate){
+                if (bestPlate == lastDetectedPlate){// && (currentTime - lastDetectionTime) < DETECTION_COOLDOWN_MS) {
                     Log.d(TAG, "쿨다운 시간 내 감지됨, 무시: $bestPlate")
                     serverStatusListener("이전번호판과 동일")
                     imageProxy.close()
@@ -95,6 +95,14 @@ class ImprovedLicensePlateDetectionProcessor(
                     lastDetectionTime = currentTime
                     plateNumberListener(bestPlate)
 
+                    // 서버 전송 딜레이 확인
+                    //if (currentTime - lastSentTime < SERVER_SEND_COOLDOWN_MS) {
+                    //    Log.d(TAG, "서버 전송 쿨다운 시간 내, 무시: $bestPlate")
+
+                    //    imageProxy.close()
+                    //    return
+                    //}
+                   // lastSentTime = currentTime
 
                     when (IMAGE_SEND_MODE) {
                         "NONE" -> sendTextOnly(bestPlate)
