@@ -482,6 +482,7 @@ class ImprovedLicensePlateDetectionProcessor(
         private val OLD_CAR_PATTERN = Pattern.compile("\\d{2,3}[가-힣]\\d{4}")         // 12가1234
         private val NEW_CAR_PATTERN = Pattern.compile("\\d{2,3}[가-힣]\\d{4}")         // 123가1234
         private val BUSINESS_LICENSE_PATTERN = Pattern.compile("[가-힣]{2}\\d{2}[가-힣]\\d{4}")  // 서울12가1234
+        private val BUSINESS_LICENSE_PATTERN1 = Pattern.compile("[가-힣]{2,3}\\d{2}[가-힣]\\d{4}")  // 서울123가1234
         private val RENTAL_CAR_PATTERN = Pattern.compile("\\d{2,3}[하-힣]\\d{4}")      // 렌터카 번호판
         private val TAXI_PATTERN = Pattern.compile("\\d{2,3}[바-사]\\d{4}")           // 택시 번호판
         private val DIPLOMATIC_PATTERN = Pattern.compile("\\d{2,3}[아-자]\\d{4}")      // 외교 번호판
@@ -492,6 +493,7 @@ class ImprovedLicensePlateDetectionProcessor(
             OLD_CAR_PATTERN,
             NEW_CAR_PATTERN,
             BUSINESS_LICENSE_PATTERN,
+            BUSINESS_LICENSE_PATTERN1,
             RENTAL_CAR_PATTERN,
             TAXI_PATTERN,
             DIPLOMATIC_PATTERN,
