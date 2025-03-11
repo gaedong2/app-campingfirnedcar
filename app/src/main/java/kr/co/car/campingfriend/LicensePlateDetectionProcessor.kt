@@ -30,13 +30,12 @@ class ImprovedLicensePlateDetectionProcessor(
     private val client = OkHttpClient()
     private val isProcessing = AtomicBoolean(false)
     private var lastDetectedPlate = ""
-    private var lastDetectionTime = 0L
-    private var lastSentTime = 0L
+
 
     // 최근 인식 결과 저장을 위한 맵 (번호판 -> 카운트)
     private val recentDetections = mutableMapOf<String, Int>()
     private val MAX_RECENT_DETECTIONS = 10
-    private val CONFIDENCE_THRESHOLD = 0.5f //신뢰도
+    private val CONFIDENCE_THRESHOLD = 0.7f //신뢰도
 
     @SuppressLint("UnsafeOptInUsageError")
     override fun analyze(imageProxy: ImageProxy) {
@@ -76,10 +75,9 @@ class ImprovedLicensePlateDetectionProcessor(
             if (bestPlate.isNotEmpty() && confidence >= CONFIDENCE_THRESHOLD) {
                 Log.d(TAG, "번호판 인식됨: $bestPlate (신뢰도: $confidence)")
 
-                val currentTime = System.currentTimeMillis()
 
                 // 번호판 중복 감지 방지 로직 (이전 검출된 번호판과 같은경우 무시)
-                if (bestPlate == lastDetectedPlate){
+                if (bestPlate == lastDetectedPlate){// && (currentTime - lastDetectionTime) < DETECTION_COOLDOWN_MS) {
                     Log.d(TAG, "쿨다운 시간 내 감지됨, 무시: $bestPlate")
                     serverStatusListener("이전번호판과 동일")
                     imageProxy.close()
@@ -92,10 +90,7 @@ class ImprovedLicensePlateDetectionProcessor(
 
                 if (detectionCount >= 3 || confidence > 0.9f) {
                     lastDetectedPlate = bestPlate
-                    lastDetectionTime = currentTime
                     plateNumberListener(bestPlate)
-
-
                     when (IMAGE_SEND_MODE) {
                         "NONE" -> sendTextOnly(bestPlate)
                         "FULL_FRAME" -> sendFullFrame(bestPlate, imageProxy)
@@ -128,6 +123,8 @@ class ImprovedLicensePlateDetectionProcessor(
         // 전체 텍스트에서 클린 텍스트 생성
         val fullText = text.text
         val cleanText = fullText.replace("\\s+".toRegex(), "")
+
+        Log.d(TAG, "수집된 텍스트: $cleanText")
 
         // 패턴 리스트에서 매칭 시도
         val patternMatches = mutableListOf<String>()
@@ -465,16 +462,12 @@ class ImprovedLicensePlateDetectionProcessor(
     companion object {
         private const val TAG = "ImprovedLicensePlateProcessor"
         private const val SERVER_URL = "https://admin.campingfriend.co.kr/api/license"
-
         private const val IMAGE_SEND_MODE = "FULL_FRAME" // 전송 모드: "NONE", "FULL_FRAME", "CROPPED_PLATE"
-        private const val DETECTION_COOLDOWN_MS = 3000L
-        private const val SERVER_SEND_COOLDOWN_MS = 5000L
-
         // 다양한 번호판 패턴 정의
         private val OLD_CAR_PATTERN = Pattern.compile("\\d{2,3}[가-힣]\\d{4}")         // 12가1234
         private val NEW_CAR_PATTERN = Pattern.compile("\\d{2,3}[가-힣]\\d{4}")         // 123가1234
         private val BUSINESS_LICENSE_PATTERN = Pattern.compile("[가-힣]{2}\\d{2}[가-힣]\\d{4}")  // 서울12가1234
-        private val BUSINESS_LICENSE_PATTERN1 = Pattern.compile("[가-힣]{2,3}\\d{2}[가-힣]\\d{4}")  // 서울123가1234
+
         private val RENTAL_CAR_PATTERN = Pattern.compile("\\d{2,3}[하-힣]\\d{4}")      // 렌터카 번호판
         private val TAXI_PATTERN = Pattern.compile("\\d{2,3}[바-사]\\d{4}")           // 택시 번호판
         private val DIPLOMATIC_PATTERN = Pattern.compile("\\d{2,3}[아-자]\\d{4}")      // 외교 번호판
@@ -485,7 +478,6 @@ class ImprovedLicensePlateDetectionProcessor(
             OLD_CAR_PATTERN,
             NEW_CAR_PATTERN,
             BUSINESS_LICENSE_PATTERN,
-            BUSINESS_LICENSE_PATTERN1,
             RENTAL_CAR_PATTERN,
             TAXI_PATTERN,
             DIPLOMATIC_PATTERN,
